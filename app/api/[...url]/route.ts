@@ -64,7 +64,7 @@ export async function GET(
   let html = new TextDecoder('utf-8').decode(decompressedBuffer);
 
   // Replace absolute URLs from localhost with the production domain.
-  html = html.replaceAll('http://localhost:3000', 'https://uqloads.xyz');
+  html = html.replaceAll('https://decompress-zstd.vercel.app', 'https://uqloads.xyz');
   // If relative URLs are used (e.g. /css/main.css), inject a <base> tag.
   html = html.replace(/<head>/i, '<head><base href="https://uqloads.xyz/">');
 
