@@ -50,11 +50,11 @@ export async function GET(
     try {
       decompressedBuffer = ZstdSimple.decompress(compressedBuffer);
     } catch (error: unknown) {
-      let simpleErrorMessage = error instanceof Error ? error.message : 'Unknown simple decompression error';
+      const simpleErrorMessage = error instanceof Error ? error.message : 'Unknown simple decompression error';
       try {
         decompressedBuffer = ZstdStream.decompress(compressedBuffer);
       } catch (streamError: unknown) {
-        let streamErrorMessage = streamError instanceof Error ? streamError.message : 'Unknown stream decompression error';
+        const streamErrorMessage = streamError instanceof Error ? streamError.message : 'Unknown stream decompression error';
         throw new Error(`Simple decompression error: ${simpleErrorMessage}; Stream decompression error: ${streamErrorMessage}`);
       }
     }
