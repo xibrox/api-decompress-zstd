@@ -49,13 +49,13 @@ export async function GET(
     let decompressedBuffer: Uint8Array;
     try {
       decompressedBuffer = ZstdSimple.decompress(compressedBuffer);
-    } catch (simpleError: any) {
+    } catch (error: unknown) {
+      let simpleErrorMessage = error instanceof Error ? error.message : 'Unknown simple decompression error';
       try {
         decompressedBuffer = ZstdStream.decompress(compressedBuffer);
-      } catch (streamError: any) {
-        throw new Error(
-          `Simple decompression error: ${simpleError.message}; Stream decompression error: ${streamError.message}`
-        );
+      } catch (streamError: unknown) {
+        let streamErrorMessage = streamError instanceof Error ? streamError.message : 'Unknown stream decompression error';
+        throw new Error(`Simple decompression error: ${simpleErrorMessage}; Stream decompression error: ${streamErrorMessage}`);
       }
     }
 
@@ -64,9 +64,10 @@ export async function GET(
     return new NextResponse(html, {
       headers: { 'Content-Type': 'text/html' }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Error decompressing data', details: error.message },
+      { error: 'Error decompressing data', details: errorMessage },
       { status: 500 }
     );
   }
