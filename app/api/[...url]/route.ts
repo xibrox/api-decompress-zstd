@@ -3,14 +3,14 @@ import { ZstdInit } from '@oneidentity/zstd-js/decompress';
 
 export async function GET(
   request: Request,
-  { params }: { params: { url?: string[] } }
+  { params }: { params: { url: string[] } }
 ): Promise<Response> {
   try {
-    const { url: urlSegments } = params;
-    if (!urlSegments || urlSegments.length === 0) {
+    if (!params.url || params.url.length === 0) {
       return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
     }
-    const targetUrl = decodeURIComponent(urlSegments.join('/'));
+
+    const targetUrl = decodeURIComponent(params.url.join('/'));
 
     const fetchHeaders: HeadersInit = {
       'Accept':
@@ -39,11 +39,9 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch the target URL' }, { status: 400 });
     }
 
-    // Ensure we get raw binary data.
     const blob = await response.blob();
     const compressedBuffer = new Uint8Array(await blob.arrayBuffer());
 
-    // Initialize ZSTD.
     const { ZstdSimple, ZstdStream } = await ZstdInit();
 
     let decompressedBuffer: Uint8Array;
