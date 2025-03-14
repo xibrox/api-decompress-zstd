@@ -69,7 +69,7 @@ export async function GET(
       }
     }
   
-    let html = new TextDecoder('utf-8').decode(decompressedBuffer);
+    const html = new TextDecoder('utf-8').decode(decompressedBuffer);
   
     return new NextResponse(html, {
       headers: { 'Content-Type': 'text/html' }
