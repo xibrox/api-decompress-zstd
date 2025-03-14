@@ -41,8 +41,10 @@ export async function GET(
     const compressedBuffer = new Uint8Array(await blob.arrayBuffer());
 
     console.log(`Fetched ${compressedBuffer.length} bytes from ${targetUrl}`);
+    console.log("First 10 bytes:", Array.from(compressedBuffer.slice(0, 10)).map(b => b.toString(16)).join(" "));
 
     const { ZstdSimple, ZstdStream } = await ZstdInit();
+
 
     let decompressedBuffer: Uint8Array;
     try {
