@@ -3,15 +3,17 @@ import { ZstdInit } from '@oneidentity/zstd-js/decompress';
 
 export async function GET(
   request: Request,
-  context: { params: { url: string[] } }
+  context: { params: { url: string | string[] } } // Update the type here
 ): Promise<Response> {
   try {
     const { url } = context.params;
-    if (!url || url.length === 0) {
+    // Ensure url is an array
+    const urlArray = Array.isArray(url) ? url : [url];
+    if (urlArray.length === 0) {
       return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
     }
 
-    const targetUrl = decodeURIComponent(url.join('/'));
+    const targetUrl = decodeURIComponent(urlArray.join('/'));
 
     const fetchHeaders: HeadersInit = {
       'Accept':
