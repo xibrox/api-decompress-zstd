@@ -3,11 +3,11 @@ import { ZstdInit } from '@oneidentity/zstd-js/decompress';
 
 export async function GET(
   request: NextRequest,
-  context: { params?: { url?: string[] } }
+  context: { params: { url: string[] } }
 ): Promise<NextResponse> {
   try {
     // Ensure params exist and URL is provided
-    const urlParts = context.params?.url;
+    const urlParts = context.params.url;
     if (!urlParts || urlParts.length === 0) {
       return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
     }
