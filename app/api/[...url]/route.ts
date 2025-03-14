@@ -1,17 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ZstdInit } from '@oneidentity/zstd-js/decompress';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { url: string[] } }
-): Promise<Response> {
+  request: NextRequest,
+  context: { params?: { url?: string[] } }
+): Promise<NextResponse> {
   try {
-    if (!params.url || params.url.length === 0) {
+    // Ensure params exist and URL is provided
+    const urlParts = context.params?.url;
+    if (!urlParts || urlParts.length === 0) {
       return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
     }
 
-    const targetUrl = decodeURIComponent(params.url.join('/'));
+    // Decode the URL
+    const targetUrl = decodeURIComponent(urlParts.join('/'));
 
+    // Fetch with appropriate headers
     const fetchHeaders: HeadersInit = {
       'Accept':
         'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -33,8 +37,6 @@ export async function GET(
 
     const response = await fetch(targetUrl, { headers: fetchHeaders });
 
-    console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
-
     if (!response.ok) {
       return NextResponse.json({ error: 'Failed to fetch the target URL' }, { status: 400 });
     }
@@ -42,6 +44,7 @@ export async function GET(
     const blob = await response.blob();
     const compressedBuffer = new Uint8Array(await blob.arrayBuffer());
 
+    // Initialize Zstd decompression
     const { ZstdSimple, ZstdStream } = await ZstdInit();
 
     let decompressedBuffer: Uint8Array;
