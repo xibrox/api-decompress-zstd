@@ -3,9 +3,11 @@ import { ZstdInit } from '@oneidentity/zstd-js/decompress';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { url?: string | string[] } }
+  context: { params: Promise<{ url?: string | string[] }> }
 ): Promise<NextResponse> {
-  if (!params.url) {
+  // Await the params before using them.
+  const params = await context.params;
+  if (!params.url || (Array.isArray(params.url) && params.url.length === 0)) {
     return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
   }
 
@@ -13,6 +15,7 @@ export async function GET(
   const urlParts = Array.isArray(params.url) ? params.url : [params.url];
   const targetUrl = decodeURIComponent(urlParts.join('/'));
 
+  // Set up fetch headers
   const fetchHeaders: HeadersInit = {
     'Accept':
       'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -45,21 +48,24 @@ export async function GET(
   try {
     decompressedBuffer = ZstdSimple.decompress(compressedBuffer);
   } catch (error: unknown) {
-    const simpleErrorMessage = error instanceof Error ? error.message : 'Unknown simple decompression error';
+    const simpleErrorMessage =
+      error instanceof Error ? error.message : 'Unknown simple decompression error';
     try {
       decompressedBuffer = ZstdStream.decompress(compressedBuffer);
     } catch (streamError: unknown) {
-      const streamErrorMessage = streamError instanceof Error ? streamError.message : 'Unknown stream decompression error';
-      throw new Error(`Simple decompression error: ${simpleErrorMessage}; Stream decompression error: ${streamErrorMessage}`);
+      const streamErrorMessage =
+        streamError instanceof Error ? streamError.message : 'Unknown stream decompression error';
+      throw new Error(
+        `Simple decompression error: ${simpleErrorMessage}; Stream decompression error: ${streamErrorMessage}`
+      );
     }
   }
 
   let html = new TextDecoder('utf-8').decode(decompressedBuffer);
 
-  // Replace any absolute references from localhost with the production domain.
+  // Replace absolute URLs from localhost with the production domain.
   html = html.replaceAll('http://localhost:3000', 'https://uqloads.xyz');
-
-  // If the HTML uses relative URLs (like /css/main.css), add a base tag to resolve them correctly.
+  // If relative URLs are used (e.g. /css/main.css), inject a <base> tag.
   html = html.replace(/<head>/i, '<head><base href="https://uqloads.xyz/">');
 
   return new NextResponse(html, {
