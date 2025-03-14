@@ -5,56 +5,67 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ url?: string | string[] }> }
 ): Promise<NextResponse> {
-  try {
-    const params = await context.params;
-    if (!params.url || (Array.isArray(params.url) && params.url.length === 0)) {
-      return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
-    }
-
-    const urlParts = Array.isArray(params.url) ? params.url : [params.url];
-    const targetUrl = decodeURIComponent(urlParts.join('/'));
-
-    // Proxy request headers
-    const fetchHeaders: HeadersInit = {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-      'Accept-Encoding': 'gzip, deflate, br, zstd',
-      'Referer': 'https://vidapi.xyz/',
-      'DNT': '1',
-    };
-
-    const response = await fetch(targetUrl, { headers: fetchHeaders });
-    if (!response.ok) {
-      return NextResponse.json({ error: 'Failed to fetch the target URL' }, { status: response.status });
-    }
-
-    const blob = await response.blob();
-    const compressedBuffer = new Uint8Array(await blob.arrayBuffer());
-    const { ZstdSimple, ZstdStream } = await ZstdInit();
-
-    let decompressedBuffer: Uint8Array;
-    try {
-      decompressedBuffer = ZstdSimple.decompress(compressedBuffer);
-    } catch (error) {
-      try {
-        decompressedBuffer = ZstdStream.decompress(compressedBuffer);
-      } catch (streamError) {
-        return NextResponse.json({ error: 'Decompression failed' }, { status: 500 });
-      }
-    }
-
-    let html = new TextDecoder('utf-8').decode(decompressedBuffer);
-
-    // Update URLs in response
-    html = html.replaceAll('https://decompress-zstd.vercel.app', 'https://uqloads.xyz');
-    html = html.replace(/<head>/i, '<head><base href="https://uqloads.xyz/">');
-
-    return new NextResponse(html, {
-      headers: {
-        'Content-Type': 'text/html',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  // Await the params before using them.
+  const params = await context.params;
+  if (!params.url || (Array.isArray(params.url) && params.url.length === 0)) {
+    return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
   }
+
+  // Normalize urlParts to an array
+  const urlParts = Array.isArray(params.url) ? params.url : [params.url];
+  const targetUrl = decodeURIComponent(urlParts.join('/'));
+
+  // Set up fetch headers
+  const fetchHeaders: HeadersInit = {
+    'Accept':
+      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br, zstd',
+    'Accept-Language': 'cs-CZ,cs;q=0.9',
+    'DNT': '1',
+    'Referer': 'https://vidapi.xyz/',
+    'Sec-CH-UA': '"Chromium";v="133", "Not(A:Brand";v="99"',
+    'Sec-CH-UA-Mobile': '?0',
+    'Sec-CH-UA-Platform': '"macOS"',
+    'Sec-Fetch-Dest': 'iframe',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'cross-site',
+    'Sec-Fetch-Storage-Access': 'active',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+  };
+
+  const response = await fetch(targetUrl, { headers: fetchHeaders });
+  if (!response.ok) {
+    return NextResponse.json({ error: 'Failed to fetch the target URL' }, { status: 400 });
+  }
+
+  const blob = await response.blob();
+  const compressedBuffer = new Uint8Array(await blob.arrayBuffer());
+  const { ZstdSimple, ZstdStream } = await ZstdInit();
+
+  let decompressedBuffer: Uint8Array;
+  try {
+    decompressedBuffer = ZstdSimple.decompress(compressedBuffer);
+  } catch {
+    try {
+      decompressedBuffer = ZstdStream.decompress(compressedBuffer);
+    } catch {
+      return NextResponse.json({ error: 'Decompression failed' }, { status: 500 });
+    }
+  }
+
+  let html = new TextDecoder('utf-8').decode(decompressedBuffer);
+
+  // Replace absolute URLs from localhost with the production domain.
+  html = html.replaceAll('https://decompress-zstd.vercel.app', 'https://uqloads.xyz');
+  // If relative URLs are used (e.g. /css/main.css), inject a <base> tag.
+  html = html.replace(/<head>/i, '<head><base href="https://uqloads.xyz/">');
+
+  return new NextResponse(html, {
+    headers: {
+      'Content-Type': 'text/html',
+      'Access-Control-Allow-Origin': '*', // Fixes CORS
+    }
+  });
 }
